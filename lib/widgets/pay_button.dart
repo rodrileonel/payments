@@ -1,7 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:payments/bloc/payment/payments_bloc.dart';
 
 class PayButton extends StatelessWidget {
   @override
@@ -48,11 +50,15 @@ class _ButtonPay extends StatelessWidget {
       color: Colors.black,
       child: Row(
         children: [
-          true
-            ? Platform.isAndroid 
-              ? Icon(FontAwesomeIcons.google)
-              : Icon(FontAwesomeIcons.apple)
-            : Icon(FontAwesomeIcons.solidCreditCard),
+          BlocBuilder<PaymentsBloc, PaymentsState>(
+            builder: (context, state) {
+              return state.activeCard 
+                ? Icon(FontAwesomeIcons.solidCreditCard)
+                : Platform.isAndroid 
+                  ? Icon(FontAwesomeIcons.google)
+                  : Icon(FontAwesomeIcons.apple);
+            },
+          ),
           Text('  Pay',style: TextStyle(fontWeight: FontWeight.w500,fontSize: 20),),
         ],
       ),
