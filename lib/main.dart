@@ -3,12 +3,19 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:payments/bloc/payment/payments_bloc.dart';
 import 'package:payments/pages/finish_page.dart';
 import 'package:payments/pages/home_page.dart';
+import 'package:payments/services/stripe_service.dart';
  
 void main() => runApp(MyApp());
  
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+
+    //final stripeService = StripeService();
+    //stripeService.init();
+
+    StripeService()..init();
+
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => PaymentsBloc(),)

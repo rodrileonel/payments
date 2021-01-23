@@ -7,6 +7,8 @@ class PaymentsState{
   final bool activeCard;
   final CreditDebitCard card;
 
+  String get amoutString => '${(this.amount * 100).floor()}';
+
   PaymentsState({
     this.amount = 375.99,
     this.currency = 'USD',
