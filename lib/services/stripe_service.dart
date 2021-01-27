@@ -25,11 +25,31 @@ class StripeService{
     );
   }
 
-  Future payWithCard({
+  Future<StripeCustomResponse> payWithCard({
     @required String amount,
     @required String currency,
     @required CreditCard card,
-  }) async{}
+  }) async{
+    try {
+      final paymentMethod = await StripePayment.createPaymentMethod(
+        PaymentMethodRequest(card: card)
+      );
+
+      final response = await this._doPayment(
+        amount: amount, 
+        currency: currency, 
+        paymentMethod: paymentMethod
+      );
+
+      return response;
+      
+    } catch (e) {
+      return StripeCustomResponse(
+        ok: false,
+        message: e.toString(),
+      );
+    }
+  }
 
   Future<StripeCustomResponse> payWithNewCard({
     @required String amount,
@@ -56,10 +76,55 @@ class StripeService{
     }
   }
 
-  Future payWithAppleAndGooglePay({
+  Future<StripeCustomResponse> payWithAppleAndGooglePay({
     @required String amount,
     @required String currency,
-  }) async{}
+  }) async{
+    try {
+
+      final token = await StripePayment.paymentRequestWithNativePay(
+        androidPayOptions: AndroidPayPaymentRequest(
+          currencyCode: currency, 
+          totalPrice: amount,
+        ), 
+        applePayOptions: ApplePayPaymentOptions(
+          countryCode: 'US',
+          currencyCode: currency,
+          items: [
+            ApplePayItem(
+              label:'Producto 1',
+              amount:'${double.parse(amount)/100}',
+            )
+          ]
+        )
+      );
+
+      final paymentMethod = await StripePayment.createPaymentMethod(
+        PaymentMethodRequest(
+          //token:token
+          card: CreditCard(
+            token:token.tokenId
+          )
+        )
+      );
+
+      final response = await this._doPayment(
+        amount: amount, 
+        currency: currency, 
+        paymentMethod: paymentMethod
+      );
+
+      await StripePayment.completeNativePayRequest();
+
+      return response;
+      
+    } catch (e) {
+      return StripeCustomResponse(
+        ok: false,
+        message: e.toString(),
+      );
+    }
+  }
 
   Future<PaymentIntentResponse> _createPaymentIntent({
     @required String amount,

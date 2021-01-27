@@ -4,12 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:payments/bloc/payment/payments_bloc.dart';
+import 'package:payments/helpers/alerts.dart';
+import 'package:payments/services/stripe_service.dart';
+import 'package:stripe_payment/stripe_payment.dart';
 
 class PayButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
 
     final size = MediaQuery.of(context).size;
+    final payBloc = BlocProvider.of<PaymentsBloc>(context).state;
 
     return Container(
       width: size.width,
@@ -29,10 +33,14 @@ class PayButton extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text('Total', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),),
-              Text('250.99 USD',style: TextStyle(fontSize: 20)),
+              Text('${payBloc.amount}} ${payBloc.currency}',style: TextStyle(fontSize: 20)),
             ],
           ),
-          _ButtonPay()
+          BlocBuilder<PaymentsBloc, PaymentsState>(
+            builder: (context, state) {
+              return _ButtonPay(state);
+            },
+          )
         ]
       ),
     );
@@ -40,6 +48,11 @@ class PayButton extends StatelessWidget {
 }
 
 class _ButtonPay extends StatelessWidget {
+
+  final PaymentsState state;
+
+  const _ButtonPay(this.state);
+
   @override
   Widget build(BuildContext context) {
     return MaterialButton(
@@ -49,57 +62,67 @@ class _ButtonPay extends StatelessWidget {
       elevation: 0,
       color: Colors.black,
       child: Row(
-        children: [
-          BlocBuilder<PaymentsBloc, PaymentsState>(
-            builder: (context, state) {
-              return state.activeCard 
+          children: [
+              state.activeCard 
                 ? Icon(FontAwesomeIcons.solidCreditCard)
                 : Platform.isAndroid 
                   ? Icon(FontAwesomeIcons.google)
-                  : Icon(FontAwesomeIcons.apple);
-            },
-          ),
-          Text('  Pay',style: TextStyle(fontWeight: FontWeight.w500,fontSize: 20),),
-        ],
+                  : Icon(FontAwesomeIcons.apple),
+              
+            Text('  Pay',style: TextStyle(fontWeight: FontWeight.w500,fontSize: 20),),
+          ],
+            
       ),
-      onPressed: () {  },
+      onPressed: () async => state.activeCard 
+        ? payWithCard(context)
+        : payWithGoogleApple(context),
+
     );
     //return true  ? buildStoresPay(context) : buildCardPay(context);
   }
 
-  Widget buildStoresPay(BuildContext context) {
-    return MaterialButton(
-      height: 50,
-      minWidth: 150,
-      shape: StadiumBorder(),
-      elevation: 0,
-      color: Colors.black,
-      child: Row(
-        children: [
-          Platform.isAndroid 
-            ? Icon(FontAwesomeIcons.google)
-            : Icon(FontAwesomeIcons.apple),
-          Text('  Pay',style: TextStyle(fontWeight: FontWeight.w500,fontSize: 20),),
-        ],
-      ),
-      onPressed: () {  },
+  payWithCard(BuildContext context) async {
+    showLoading(context);
+
+    final stripeService =StripeService();
+    final payBloc = BlocProvider.of<PaymentsBloc>(context).state;
+
+    final response = await stripeService.payWithCard(
+      amount: payBloc.amoutString, 
+      currency: payBloc.currency, 
+      card: CreditCard(
+        number:payBloc.card.cardNumber,
+        expMonth:int.parse(payBloc.card.expiracyDate.split('/')[0]),
+        expYear: int.parse(payBloc.card.expiracyDate.split('/')[1]),
+      )
     );
+
+    Navigator.pop(context);
+
+    if(response.ok)
+      showAlert(context, 'Tarjeta ok', 'Todo ok');
+    else
+      showAlert(context, 'Algo salio mal', response.message);
+
   }
 
-  Widget buildCardPay(BuildContext context) {
-    return MaterialButton(
-      height: 50,
-      minWidth: 150,
-      shape: StadiumBorder(),
-      elevation: 0,
-      color: Colors.black,
-      child: Row(
-        children: [
-          Icon(FontAwesomeIcons.solidCreditCard),
-          Text('  Pay',style: TextStyle(fontWeight: FontWeight.w500,fontSize: 20),),
-        ],
-      ),
-      onPressed: () {  },
+  payWithGoogleApple(BuildContext context) async {
+
+    final stripeService =StripeService();
+    final payBloc = BlocProvider.of<PaymentsBloc>(context).state;
+
+    final response = await stripeService.payWithAppleAndGooglePay(
+      amount: payBloc.amoutString, 
+      currency: payBloc.currency,
     );
+/*
+    Navigator.pop(context);
+
+    if(response.ok)
+      showAlert(context, 'Tarjeta ok', 'Todo ok');
+    else
+      showAlert(context, 'Algo salio mal', response.message);
+*/
   }
+ 
 }
